@@ -73,22 +73,29 @@ fn main() -> Result<(), ExitFailure> {
         println!("Current {:#?}", &record);
     }
 
-    let new_record: DnsRecord = api_client.request(
-        &PatchDnsRecord {
-            zone_identifier: &zone_id,
-            record_identifier: &record_id,
-            params: PatchDnsRecordParams {
-                content: Some(DnsContent::A {
-                    content: public_ip
-                }),
-                ..Default::default()
-            },
-        })
-        .context("Unable to update DNS record")?
-        .result;
-    println!("Successfully updated {}!", &record_name);
-    if verbose_logging {
-        println!("New {:#?}", &new_record)
+    match &record.content {
+        DnsContent::A { content } if *content == public_ip => {
+            println!("{} already up-to-date!", &record_name)
+        },
+        _ => {
+            let new_record: DnsRecord = api_client.request(
+                &PatchDnsRecord {
+                    zone_identifier: &zone_id,
+                    record_identifier: &record_id,
+                    params: PatchDnsRecordParams {
+                        content: Some(DnsContent::A {
+                            content: public_ip
+                        }),
+                        ..Default::default()
+                    },
+                })
+                .context("Unable to update DNS record")?
+                .result;
+            println!("{} successfully updated!", &record_name);
+            if verbose_logging {
+                println!("New {:#?}", &new_record)
+            }
+        }
     }
 
     Ok(())
