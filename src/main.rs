@@ -8,7 +8,7 @@ use serde::Serialize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = App::new("cloudflare-ddns")
-        .version("0.0")
+        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .arg(Arg::with_name("auth-token")
             .long("auth-token")
             .help("API token generated on the \"My Account\" page")
