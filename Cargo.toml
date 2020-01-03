@@ -1,0 +1,16 @@
+[package]
+name = "cloudflare-ddns"
+version = "0.1.0"
+authors = ["Jake Wharton <jakewharton@gmail.com>"]
+edition = "2018"
+description = "Update the value of a Cloudflare DNS record to your public IP"
+keywords = ["cloudflare", "dynamic dns", "ddns", "dns"]
+categories = ["command-line-utilities"]
+license = "Apache-2.0"
+repository = "https://github.com/JakeWharton/cloudflare-ddns"
+
+[dependencies]
+clap = "2.33.0"
+cloudflare = "0.5.0"
+reqwest = { version = "0.10.0", features = ["blocking"] }
+serde = { version = "1.0", features = ["derive"] }
