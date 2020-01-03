@@ -34,6 +34,14 @@ Successfully updated server.example.com!
 ```
 
 
+Install
+-------
+
+```
+$ cargo install cloudflare-ddns
+```
+
+
 
 License
 -------
