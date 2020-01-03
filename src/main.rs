@@ -46,12 +46,26 @@ fn main() -> Result<(), ExitFailure> {
         println!("Found {} DNS records", &record_list.len());
     }
 
-    // TODO filter by A records only.
-    let record = record_list.iter()
+    let a_records: Vec<DnsRecord> = record_list.into_iter()
+        .filter(|record| {
+            return match &record.content {
+                DnsContent::A { .. } => true,
+                _ => false,
+            }
+        }).collect();
+    let record = a_records.iter()
         .find(|record| record.name == record_name)
         .ok_or(Error::new(ErrorKind::InvalidData, "No DNS record found with specified name"))
         .with_context(|_| {
-            let dns_names: Vec<&String> = record_list.iter().map(|record| &record.name).collect();
+            let dns_names: Vec<String> = a_records.iter()
+                .map(|record| {
+                    let ip = match &record.content {
+                        DnsContent::A { content: ip } => ip,
+                        _ => unreachable!(), // Source Vec only contains A records.
+                    };
+                    return format!("A {} {}", &record.name, ip)
+                })
+                .collect();
             return format!("No matching DNS record in {:?}", dns_names);
         })?;
     let record_id = &record.id;
