@@ -10,7 +10,10 @@ license = "Apache-2.0"
 repository = "https://github.com/JakeWharton/cloudflare-ddns"
 
 [dependencies]
-clap = "2.33.0"
 cloudflare = "0.5.0"
 reqwest = { version = "0.10.0", features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
+
+[dependencies.clap]
+version = "2.33.0"
+default-features = false

@@ -7,7 +7,7 @@ use cloudflare::framework::endpoint::{Endpoint, Method};
 use serde::Serialize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = App::new("cloudflare-ddns")
+    let matches = App::new("cloudflare-ddns")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .arg(Arg::with_name("verbose")
             .short("v")
@@ -29,12 +29,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .help("DNS record \"name\" from domain \"DNS\" page")
             .takes_value(true)
             .required(true))
-        .setting(AppSettings::ArgRequiredElseHelp);
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .get_matches();
 
-    let matches = cli.get_matches();
-    let token = matches.value_of("auth-token").unwrap();
-    let zone_id = matches.value_of("zone-id").unwrap();
-    let record_name = matches.value_of("record-name").unwrap();
+    let token = matches.value_of("auth-token").unwrap(); // safe because required
+    let zone_id = matches.value_of("zone-id").unwrap(); // safe because required
+    let record_name = matches.value_of("record-name").unwrap(); // safe because required
     let verbose_logging = matches.is_present("verbose");
 
     let public_ip = reqwest::blocking::get("https://api.ipify.org")?.text()?.to_owned();
