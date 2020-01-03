@@ -2,7 +2,6 @@ use std::io::{Error, ErrorKind};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
-use clap::{App, AppSettings, Arg};
 use cloudflare::endpoints::dns::{DnsContent, DnsRecord, ListDnsRecords};
 use cloudflare::framework::{Environment, HttpApiClient, HttpApiClientConfig};
 use cloudflare::framework::apiclient::ApiClient;
@@ -11,37 +10,31 @@ use cloudflare::framework::endpoint::{Endpoint, Method};
 use exitfailure::ExitFailure;
 use failure::ResultExt;
 use serde::Serialize;
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "cloudflare-ddns")]
+struct Args {
+    /// API token generated on the "My Account" page
+    #[structopt(long)]
+    auth_token: String,
+    /// Zone ID from domain "Overview" page, "API" section
+    #[structopt(long)]
+    zone_id: String,
+    /// DNS record "name" from domain "DNS" page
+    #[structopt(long)]
+    record_name: String,
+    /// Enable verbose logging
+    #[structopt(short, long)]
+    verbose: bool
+}
 
 fn main() -> Result<(), ExitFailure> {
-    let matches = App::new("cloudflare-ddns")
-        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
-        .arg(Arg::with_name("verbose")
-            .short("v")
-            .long("verbose")
-            .help("Enable verbose logging"))
-        .arg(Arg::with_name("auth-token")
-            .long("auth-token")
-            .help("API token generated on the \"My Account\" page")
-            .takes_value(true)
-            .allow_hyphen_values(true)
-            .required(true))
-        .arg(Arg::with_name("zone-id")
-            .long("zone-id")
-            .help("Zone ID from domain \"Overview\" page, \"API\" section")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("record-name")
-            .long("record-name")
-            .help("DNS record \"name\" from domain \"DNS\" page")
-            .takes_value(true)
-            .required(true))
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .get_matches();
-
-    let token = matches.value_of("auth-token").unwrap(); // safe because required
-    let zone_id = matches.value_of("zone-id").unwrap(); // safe because required
-    let record_name = matches.value_of("record-name").unwrap(); // safe because required
-    let verbose_logging = matches.is_present("verbose");
+    let args = Args::from_args();
+    let auth_token = args.auth_token;
+    let zone_id = args.zone_id;
+    let record_name = args.record_name;
+    let verbose_logging = args.verbose;
 
     let public_ip_str = reqwest::blocking::get("https://api.ipify.org")
         .and_then(|response| response.text())
@@ -53,7 +46,7 @@ fn main() -> Result<(), ExitFailure> {
 
     let api_client = HttpApiClient::new(
         Credentials::UserAuthToken {
-            token: token.to_string(),
+            token: auth_token
         },
         HttpApiClientConfig::default(),
         Environment::Production,
@@ -61,7 +54,7 @@ fn main() -> Result<(), ExitFailure> {
 
     let record_list: Vec<DnsRecord> = api_client.request(
         &ListDnsRecords {
-            zone_identifier: zone_id,
+            zone_identifier: &zone_id,
             params: Default::default(),
         })
         .context("Unable to list DNS records")?
@@ -85,8 +78,8 @@ fn main() -> Result<(), ExitFailure> {
 
     let new_record: DnsRecord = api_client.request(
         &PatchDnsRecord {
-            zone_identifier: zone_id,
-            record_identifier: record_id,
+            zone_identifier: &zone_id,
+            record_identifier: &record_id,
             params: PatchDnsRecordParams {
                 content: Some(DnsContent::A {
                     content: public_ip
