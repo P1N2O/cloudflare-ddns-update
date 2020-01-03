@@ -17,6 +17,7 @@ USAGE:
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
+    -v, --verbose    Enable verbose logging
 
 OPTIONS:
         --auth-token <auth-token>      API token generated on the "My Account" page
@@ -28,6 +29,8 @@ Example:
 
 ```
 $ cloudflare-ddns --auth-token XYZ789 --zone-id ABC123 --record-name server.example.com
+Public IP: 12.34.56.78
+Successfully updated server.example.com!
 ```
 
 

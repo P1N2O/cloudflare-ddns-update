@@ -9,6 +9,10 @@ use serde::Serialize;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = App::new("cloudflare-ddns")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
+        .arg(Arg::with_name("verbose")
+            .short("v")
+            .long("verbose")
+            .help("Enable verbose logging"))
         .arg(Arg::with_name("auth-token")
             .long("auth-token")
             .help("API token generated on the \"My Account\" page")
@@ -31,6 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = matches.value_of("auth-token").unwrap();
     let zone_id = matches.value_of("zone-id").unwrap();
     let record_name = matches.value_of("record-name").unwrap();
+    let verbose_logging = matches.is_present("verbose");
+
+    let public_ip = reqwest::blocking::get("https://api.ipify.org")?.text()?.to_owned();
+    println!("Public IP: {}", &public_ip);
 
     let api_client = HttpApiClient::new(
         Credentials::UserAuthToken {
@@ -45,11 +53,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         params: Default::default()
     });
     let record_list: Vec<DnsRecord> = record_list_response.unwrap().result;
+    if verbose_logging {
+        println!("Found {} DNS records", &record_list.len());
+    }
 
     let record = record_list.iter().find(|record| record.name == record_name).unwrap();
     let record_id = &record.id;
-
-    let public_ip = reqwest::blocking::get("https://api.ipify.org")?.text()?.to_owned();
+    if verbose_logging {
+        println!("Current {:#?}", &record);
+    }
 
     let record_patch_response = api_client.request(&PatchDnsRecord {
         zone_identifier: zone_id,
@@ -59,6 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     let new_record: DnsRecord = record_patch_response.unwrap().result;
+    println!("Successfully updated {}!", &record_name);
+    if verbose_logging {
+        println!("New {:#?}", &new_record)
+    }
 
     Ok(())
 }
