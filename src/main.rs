@@ -11,9 +11,10 @@ use exitfailure::ExitFailure;
 use failure::ResultExt;
 use serde::Serialize;
 use structopt::StructOpt;
+use structopt::clap::AppSettings;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "cloudflare-ddns")]
+#[structopt(name = "cloudflare-ddns", global_setting = AppSettings::AllowLeadingHyphen)]
 struct Args {
     /// API token generated on the "My Account" page
     #[structopt(long)]
