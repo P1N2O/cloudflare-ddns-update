@@ -1,12 +1,16 @@
+use std::io::{Error, ErrorKind};
+
 use clap::{App, AppSettings, Arg};
 use cloudflare::endpoints::dns::{DnsRecord, ListDnsRecords};
 use cloudflare::framework::{Environment, HttpApiClient, HttpApiClientConfig};
 use cloudflare::framework::apiclient::ApiClient;
 use cloudflare::framework::auth::Credentials;
 use cloudflare::framework::endpoint::{Endpoint, Method};
+use exitfailure::ExitFailure;
+use failure::ResultExt;
 use serde::Serialize;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), ExitFailure> {
     let matches = App::new("cloudflare-ddns")
         .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
         .arg(Arg::with_name("verbose")
@@ -37,7 +41,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let record_name = matches.value_of("record-name").unwrap(); // safe because required
     let verbose_logging = matches.is_present("verbose");
 
-    let public_ip = reqwest::blocking::get("https://api.ipify.org")?.text()?.to_owned();
+    let public_ip = reqwest::blocking::get("https://api.ipify.org")
+        .and_then(|response| response.text())
+        .context("Unable to reach ipify.org to resolve public IP")?
+        .to_owned();
     println!("Public IP: {}", &public_ip);
 
     let api_client = HttpApiClient::new(
@@ -48,29 +55,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Environment::Production,
     )?;
 
-    let record_list_response = api_client.request(&ListDnsRecords {
-        zone_identifier: zone_id,
-        params: Default::default()
-    });
-    let record_list: Vec<DnsRecord> = record_list_response.unwrap().result;
+    let record_list: Vec<DnsRecord> = api_client.request(
+        &ListDnsRecords {
+            zone_identifier: zone_id,
+            params: Default::default(),
+        })
+        .context("Unable to list DNS records")?
+        .result;
     if verbose_logging {
         println!("Found {} DNS records", &record_list.len());
     }
 
-    let record = record_list.iter().find(|record| record.name == record_name).unwrap();
+    // TODO filter by A records only.
+    let record = record_list.iter()
+        .find(|record| record.name == record_name)
+        .ok_or(Error::new(ErrorKind::InvalidData, "No DNS record found with specified name"))
+        .with_context(|_| {
+            let dns_names: Vec<String> = record_list.iter().map(|record| record.name.to_owned()).collect();
+            return format!("No matching DNS record in [{:?}]", dns_names);
+        })?;
     let record_id = &record.id;
     if verbose_logging {
         println!("Current {:#?}", &record);
     }
 
-    let record_patch_response = api_client.request(&PatchDnsRecord {
-        zone_identifier: zone_id,
-        record_identifier: record_id,
-        params: PatchDnsRecordParams {
-            content: &public_ip
-        }
-    });
-    let new_record: DnsRecord = record_patch_response.unwrap().result;
+    let new_record: DnsRecord = api_client.request(
+        &PatchDnsRecord {
+            zone_identifier: zone_id,
+            record_identifier: record_id,
+            params: PatchDnsRecordParams {
+                content: &public_ip
+            },
+        })
+        .context("Unable to update DNS record")?
+        .result;
     println!("Successfully updated {}!", &record_name);
     if verbose_logging {
         println!("New {:#?}", &new_record)

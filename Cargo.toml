@@ -11,6 +11,8 @@ repository = "https://github.com/JakeWharton/cloudflare-ddns"
 
 [dependencies]
 cloudflare = "0.5.0"
+exitfailure = "0.5.1"
+failure = "0.1.6"
 reqwest = { version = "0.10.0", features = ["blocking"] }
 serde = { version = "1.0", features = ["derive"] }
 
