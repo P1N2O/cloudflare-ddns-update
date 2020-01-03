@@ -10,28 +10,11 @@ use cloudflare::framework::endpoint::{Endpoint, Method};
 use exitfailure::ExitFailure;
 use failure::ResultExt;
 use serde::Serialize;
-use structopt::StructOpt;
-use structopt::clap::AppSettings;
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "cloudflare-ddns", global_setting = AppSettings::AllowLeadingHyphen)]
-struct Args {
-    /// API token generated on the "My Account" page
-    #[structopt(long)]
-    auth_token: String,
-    /// Zone ID from domain "Overview" page, "API" section
-    #[structopt(long)]
-    zone_id: String,
-    /// DNS record "name" from domain "DNS" page
-    #[structopt(long)]
-    record_name: String,
-    /// Enable verbose logging
-    #[structopt(short, long)]
-    verbose: bool
-}
+mod args;
 
 fn main() -> Result<(), ExitFailure> {
-    let args = Args::from_args();
+    let args = args::parse_args();
     let auth_token = args.auth_token;
     let zone_id = args.zone_id;
     let record_name = args.record_name;
