@@ -1,7 +1,9 @@
 use std::io::{Error, ErrorKind};
+use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 use clap::{App, AppSettings, Arg};
-use cloudflare::endpoints::dns::{DnsRecord, ListDnsRecords};
+use cloudflare::endpoints::dns::{DnsContent, DnsRecord, ListDnsRecords};
 use cloudflare::framework::{Environment, HttpApiClient, HttpApiClientConfig};
 use cloudflare::framework::apiclient::ApiClient;
 use cloudflare::framework::auth::Credentials;
@@ -41,10 +43,12 @@ fn main() -> Result<(), ExitFailure> {
     let record_name = matches.value_of("record-name").unwrap(); // safe because required
     let verbose_logging = matches.is_present("verbose");
 
-    let public_ip = reqwest::blocking::get("https://api.ipify.org")
+    let public_ip_str = reqwest::blocking::get("https://api.ipify.org")
         .and_then(|response| response.text())
         .context("Unable to reach ipify.org to resolve public IP")?
         .to_owned();
+    let public_ip = Ipv4Addr::from_str(&public_ip_str)
+        .with_context(|_| format!("Unable to parse {} as IP", &public_ip_str))?;
     println!("Public IP: {}", &public_ip);
 
     let api_client = HttpApiClient::new(
@@ -84,7 +88,10 @@ fn main() -> Result<(), ExitFailure> {
             zone_identifier: zone_id,
             record_identifier: record_id,
             params: PatchDnsRecordParams {
-                content: &public_ip
+                content: Some(DnsContent::A {
+                    content: public_ip
+                }),
+                ..Default::default()
             },
         })
         .context("Unable to update DNS record")?
@@ -97,25 +104,30 @@ fn main() -> Result<(), ExitFailure> {
     Ok(())
 }
 
-// TODO upstream into cloudflare-rs
+// TODO switch to https://github.com/cloudflare/cloudflare-rs/pull/76 once released
 struct PatchDnsRecord<'a> {
     zone_identifier: &'a str,
     record_identifier: &'a str,
-    params: PatchDnsRecordParams<'a>,
+    params: PatchDnsRecordParams,
 }
-impl<'a> Endpoint<DnsRecord, (), PatchDnsRecordParams<'a>> for PatchDnsRecord<'a> {
+impl<'a> Endpoint<DnsRecord, (), PatchDnsRecordParams> for PatchDnsRecord<'a> {
     fn method(&self) -> Method {
         Method::Patch
     }
     fn path(&self) -> String {
         format!("zones/{}/dns_records/{}", self.zone_identifier, self.record_identifier)
     }
-    fn body(&self) -> Option<PatchDnsRecordParams<'a>> {
+    fn body(&self) -> Option<PatchDnsRecordParams> {
         Some(self.params.clone())
     }
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Serialize, Clone, Debug, Default)]
-struct PatchDnsRecordParams<'a> {
-    content: &'a str,
+struct PatchDnsRecordParams {
+    name: Option<String>,
+    #[serde(flatten)]
+    content: Option<DnsContent>,
+    ttl: Option<u32>,
+    proxied: Option<bool>,
 }
