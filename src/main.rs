@@ -39,8 +39,7 @@ fn main() -> Result<(), ExitFailure> {
 
     let public_ip_str = reqwest::blocking::get("https://api.ipify.org")
         .and_then(|response| response.text())
-        .context("Unable to reach ipify.org to resolve public IP")?
-        .to_owned();
+        .context("Unable to reach ipify.org to resolve public IP")?;
     let public_ip = Ipv4Addr::from_str(&public_ip_str)
         .with_context(|_| format!("Unable to parse {} as IP", &public_ip_str))?;
     println!("Public IP: {}", &public_ip);
@@ -69,8 +68,8 @@ fn main() -> Result<(), ExitFailure> {
         .find(|record| record.name == record_name)
         .ok_or(Error::new(ErrorKind::InvalidData, "No DNS record found with specified name"))
         .with_context(|_| {
-            let dns_names: Vec<String> = record_list.iter().map(|record| record.name.to_owned()).collect();
-            return format!("No matching DNS record in [{:?}]", dns_names);
+            let dns_names: Vec<&String> = record_list.iter().map(|record| &record.name).collect();
+            return format!("No matching DNS record in {:?}", dns_names);
         })?;
     let record_id = &record.id;
     if verbose_logging {
