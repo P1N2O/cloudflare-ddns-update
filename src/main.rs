@@ -23,7 +23,7 @@ fn main() -> Result<(), ExitFailure> {
         .with_context(|_| format!("Unable to parse {} as IP", &public_ip_str))?;
     println!("Public IP: {}", &public_ip);
 
-    let api_client = HttpApiClient::new(
+    let cloudflare_client = HttpApiClient::new(
         Credentials::UserAuthToken {
             token: auth_token
         },
@@ -31,7 +31,7 @@ fn main() -> Result<(), ExitFailure> {
         Environment::Production,
     )?;
 
-    let record_list: Vec<DnsRecord> = api_client.request(
+    let record_list: Vec<DnsRecord> = cloudflare_client.request(
         &ListDnsRecords {
             zone_identifier: &zone_id,
             params: Default::default(),
@@ -74,7 +74,7 @@ fn main() -> Result<(), ExitFailure> {
             println!("{} already up-to-date!", &record_name)
         },
         _ => {
-            let new_record: DnsRecord = api_client.request(
+            let new_record: DnsRecord = cloudflare_client.request(
                 &PatchDnsRecord {
                     zone_identifier: &zone_id,
                     record_identifier: &record_id,
