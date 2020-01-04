@@ -2,7 +2,7 @@ use structopt::clap::AppSettings;
 use structopt::StructOpt;
 
 #[derive(Debug, PartialEq, StructOpt)]
-#[structopt(name = "cloudflare-ddns-update", global_setting = AppSettings::AllowLeadingHyphen)]
+#[structopt(global_setting = AppSettings::AllowLeadingHyphen)]
 pub struct Args {
     /// API token generated on the "My Account" page
     #[structopt(long)]
