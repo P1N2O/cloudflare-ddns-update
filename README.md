@@ -8,11 +8,11 @@ Usage
 -----
 
 ```
-$ cloudflare-ddns --help
-cloudflare-ddns 0.1.0
+$ cloudflare-ddns-update --help
+cloudflare-ddns-update 0.1.0
 
 USAGE:
-    cloudflare-ddns --auth-token <auth-token> --record-name <record-name> --zone-id <zone-id>
+    cloudflare-ddns-update --auth-token <auth-token> --record-name <record-name> --zone-id <zone-id>
 
 FLAGS:
     -h, --help       Prints help information
@@ -38,7 +38,7 @@ Install
 -------
 
 ```
-$ cargo install cloudflare-ddns
+$ cargo install cloudflare-ddns-update
 ```
 
 

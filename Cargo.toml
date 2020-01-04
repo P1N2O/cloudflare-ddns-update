@@ -1,5 +1,5 @@
 [package]
-name = "cloudflare-ddns"
+name = "cloudflare-ddns-update"
 version = "0.1.0"
 authors = ["Jake Wharton <jakewharton@gmail.com>"]
 edition = "2018"
@@ -7,7 +7,7 @@ description = "Update the value of a Cloudflare DNS record to your public IP"
 keywords = ["cloudflare", "ddns", "dns"]
 categories = ["command-line-utilities"]
 license = "Apache-2.0"
-repository = "https://github.com/JakeWharton/cloudflare-ddns"
+repository = "https://github.com/JakeWharton/cloudflare-ddns-update"
 exclude = [".github/**"]
 
 [dependencies]
