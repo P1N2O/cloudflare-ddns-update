@@ -3,10 +3,10 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 
 use cloudflare::endpoints::dns::{DnsContent, DnsRecord, ListDnsRecords};
-use cloudflare::framework::{Environment, HttpApiClient, HttpApiClientConfig};
 use cloudflare::framework::apiclient::ApiClient;
 use cloudflare::framework::auth::Credentials;
 use cloudflare::framework::endpoint::{Endpoint, Method};
+use cloudflare::framework::{Environment, HttpApiClient, HttpApiClientConfig};
 use exitfailure::ExitFailure;
 use failure::ResultExt;
 use serde::Serialize;
@@ -14,7 +14,12 @@ use serde::Serialize;
 mod args;
 
 fn main() -> Result<(), ExitFailure> {
-    let args::Args { auth_token, zone_id, record_name, verbose } = args::parse_args();
+    let args::Args {
+        auth_token,
+        zone_id,
+        record_name,
+        verbose,
+    } = args::parse_args();
 
     let public_ip_str = reqwest::blocking::get("https://api.ipify.org")
         .and_then(|response| response.text())
@@ -24,15 +29,13 @@ fn main() -> Result<(), ExitFailure> {
     println!("Public IP: {}", &public_ip);
 
     let cloudflare_client = HttpApiClient::new(
-        Credentials::UserAuthToken {
-            token: auth_token
-        },
+        Credentials::UserAuthToken { token: auth_token },
         HttpApiClientConfig::default(),
         Environment::Production,
     )?;
 
-    let record_list: Vec<DnsRecord> = cloudflare_client.request(
-        &ListDnsRecords {
+    let record_list: Vec<DnsRecord> = cloudflare_client
+        .request(&ListDnsRecords {
             zone_identifier: &zone_id,
             params: Default::default(),
         })
@@ -42,24 +45,31 @@ fn main() -> Result<(), ExitFailure> {
         println!("Found {} DNS records", &record_list.len());
     }
 
-    let a_records: Vec<DnsRecord> = record_list.into_iter()
+    let a_records: Vec<DnsRecord> = record_list
+        .into_iter()
         .filter(|record| {
             return match &record.content {
                 DnsContent::A { .. } => true,
                 _ => false,
-            }
-        }).collect();
-    let record = a_records.iter()
+            };
+        })
+        .collect();
+    let record = a_records
+        .iter()
         .find(|record| record.name == record_name)
-        .ok_or(Error::new(ErrorKind::InvalidData, "No DNS record found with specified name"))
+        .ok_or(Error::new(
+            ErrorKind::InvalidData,
+            "No DNS record found with specified name",
+        ))
         .with_context(|_| {
-            let dns_names: Vec<String> = a_records.iter()
+            let dns_names: Vec<String> = a_records
+                .iter()
                 .map(|record| {
                     let ip = match &record.content {
                         DnsContent::A { content: ip } => ip,
                         _ => unreachable!(), // Source Vec only contains A records.
                     };
-                    return format!("A {} {}", &record.name, ip)
+                    return format!("A {} {}", &record.name, ip);
                 })
                 .collect();
             return format!("No matching DNS record in {:?}", dns_names);
@@ -72,16 +82,14 @@ fn main() -> Result<(), ExitFailure> {
     match &record.content {
         DnsContent::A { content } if *content == public_ip => {
             println!("{} already up-to-date!", &record_name)
-        },
+        }
         _ => {
-            let new_record: DnsRecord = cloudflare_client.request(
-                &PatchDnsRecord {
+            let new_record: DnsRecord = cloudflare_client
+                .request(&PatchDnsRecord {
                     zone_identifier: &zone_id,
                     record_identifier: &record_id,
                     params: PatchDnsRecordParams {
-                        content: Some(DnsContent::A {
-                            content: public_ip
-                        }),
+                        content: Some(DnsContent::A { content: public_ip }),
                         ..Default::default()
                     },
                 })
@@ -108,7 +116,10 @@ impl<'a> Endpoint<DnsRecord, (), PatchDnsRecordParams> for PatchDnsRecord<'a> {
         Method::Patch
     }
     fn path(&self) -> String {
-        format!("zones/{}/dns_records/{}", self.zone_identifier, self.record_identifier)
+        format!(
+            "zones/{}/dns_records/{}",
+            self.zone_identifier, self.record_identifier
+        )
     }
     fn body(&self) -> Option<PatchDnsRecordParams> {
         Some(self.params.clone())
