@@ -1,5 +1,5 @@
-Cloudflare DDNS
-===============
+Cloudflare DDNS Update
+======================
 
 A command-line utility which updates the value of a Cloudflare DNS record to your public IP.
 
