@@ -14,11 +14,7 @@ use serde::Serialize;
 mod args;
 
 fn main() -> Result<(), ExitFailure> {
-    let args = args::parse_args();
-    let auth_token = args.auth_token;
-    let zone_id = args.zone_id;
-    let record_name = args.record_name;
-    let verbose_logging = args.verbose;
+    let args::Args { auth_token, zone_id, record_name, verbose } = args::parse_args();
 
     let public_ip_str = reqwest::blocking::get("https://api.ipify.org")
         .and_then(|response| response.text())
@@ -42,7 +38,7 @@ fn main() -> Result<(), ExitFailure> {
         })
         .context("Unable to list DNS records")?
         .result;
-    if verbose_logging {
+    if verbose {
         println!("Found {} DNS records", &record_list.len());
     }
 
@@ -69,7 +65,7 @@ fn main() -> Result<(), ExitFailure> {
             return format!("No matching DNS record in {:?}", dns_names);
         })?;
     let record_id = &record.id;
-    if verbose_logging {
+    if verbose {
         println!("Current {:#?}", &record);
     }
 
@@ -92,7 +88,7 @@ fn main() -> Result<(), ExitFailure> {
                 .context("Unable to update DNS record")?
                 .result;
             println!("{} successfully updated!", &record_name);
-            if verbose_logging {
+            if verbose {
                 println!("New {:#?}", &new_record)
             }
         }
